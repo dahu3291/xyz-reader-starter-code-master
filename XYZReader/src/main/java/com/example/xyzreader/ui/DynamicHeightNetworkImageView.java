@@ -4,8 +4,6 @@ import android.content.Context;
 import android.util.AttributeSet;
 import  android.support.v7.widget.AppCompatImageView;
 
-import com.android.volley.toolbox.NetworkImageView;
-
 public class DynamicHeightNetworkImageView extends AppCompatImageView {
     private float mAspectRatio = 1.5f;
 

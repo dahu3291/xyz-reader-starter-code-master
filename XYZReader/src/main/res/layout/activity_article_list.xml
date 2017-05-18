@@ -7,7 +7,7 @@
     <android.support.design.widget.AppBarLayout
         android:id="@+id/app_bar_layout"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="@dimen/appbar_height"
         android:background="?colorPrimary"
         android:backgroundTint="@color/theme_primary"
         android:elevation="8dp"
