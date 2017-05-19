@@ -50,6 +50,17 @@ public class ArticleDetailFragment extends Fragment implements
     private static final float PARALLAX_FACTOR = 1.25f;
     private static final String ARG_ALBUM_IMAGE_POSITION = "arg_album_image_position";
     private static final String ARG_STARTING_ALBUM_IMAGE_POSITION = "arg_starting_album_image_position";
+    private final Callback mImageCallback = new Callback() {
+        @Override
+        public void onSuccess() {
+            startPostponedEnterTransition();
+        }
+
+        @Override
+        public void onError() {
+            startPostponedEnterTransition();
+        }
+    };
     private Cursor mCursor;
     private long mItemId;
     private View mRootView;
@@ -70,17 +81,6 @@ public class ArticleDetailFragment extends Fragment implements
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
     private int mStartingPosition;
     private int mArticlePosition;
-    private final Callback mImageCallback = new Callback() {
-        @Override
-        public void onSuccess() {
-            startPostponedEnterTransition();
-        }
-
-        @Override
-        public void onError() {
-            startPostponedEnterTransition();
-        }
-    };
     private boolean mIsTransitioning;
     private long mBackgroundImageFadeMillis;
     /**
@@ -184,6 +184,14 @@ public class ArticleDetailFragment extends Fragment implements
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
         String newTransitionName = getString(R.string.transition_photo) + String.valueOf(mItemId);
         mPhotoView.setTransitionName(newTransitionName);
+        mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
+                ActivityCompat.startPostponedEnterTransition(getActivity());
+                return true;
+            }
+        });
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mPhotoView.setTransitionName(newTransitionName);
@@ -339,18 +347,18 @@ public class ArticleDetailFragment extends Fragment implements
     }
 
     private void startPostponedEnterTransition() {
-        if (mArticlePosition == mStartingPosition) {
-            mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-                @Override
-                public boolean onPreDraw() {
-                    mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
-                    ActivityCompat.startPostponedEnterTransition(getActivity());
+//        if (mArticlePosition == mStartingPosition) {
+//            mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+//                @Override
+//                public boolean onPreDraw() {
+//                    mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
 //                    ActivityCompat.startPostponedEnterTransition(getActivity());
-//                    getActivity().startPostponedEnterTransition();
-                    return true;
-                }
-            });
-        }
+////                    ActivityCompat.startPostponedEnterTransition(getActivity());
+////                    getActivity().startPostponedEnterTransition();
+//                    return true;
+//                }
+//            });
+//        }
     }
 
     /**

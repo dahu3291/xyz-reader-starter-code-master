@@ -117,7 +117,7 @@ public class ArticleListActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-//        setExitSharedElementCallback(mCallback);
+        setExitSharedElementCallback(mCallback);
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
 
@@ -199,16 +199,23 @@ public class ArticleListActivity extends AppCompatActivity implements
             mRecyclerView.scrollToPosition(currentPosition);
         }
         postponeEnterTransition();
-        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+        mSwipeRefreshLayout.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
             @Override
             public boolean onPreDraw() {
-                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
-                // TODO: figure out why it is necessary to request layout here in order to get a smooth transition.
-                mRecyclerView.requestLayout();
+                mSwipeRefreshLayout.getViewTreeObserver().removeOnPreDrawListener(this);
                 startPostponedEnterTransition();
                 return true;
             }
         });
+//        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+//            @Override
+//            public boolean onPreDraw() {
+//                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
+//                mRecyclerView.requestLayout();
+//                startPostponedEnterTransition();
+//                return true;
+//            }
+//        });
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
