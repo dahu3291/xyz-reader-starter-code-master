@@ -5,7 +5,6 @@ import android.app.LoaderManager;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
@@ -16,9 +15,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ShareCompat;
-import android.support.v7.graphics.Palette;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
@@ -26,14 +28,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.ImageLoader;
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.RequestCreator;
 
 /**
  * A fragment representing a single Article detail screen. This fragment is
@@ -45,7 +48,8 @@ public class ArticleDetailFragment extends Fragment implements
     public static final String ARG_ITEM_ID = "item_id";
     private static final String TAG = "ArticleDetailFragment";
     private static final float PARALLAX_FACTOR = 1.25f;
-
+    private static final String ARG_ALBUM_IMAGE_POSITION = "arg_album_image_position";
+    private static final String ARG_STARTING_ALBUM_IMAGE_POSITION = "arg_starting_album_image_position";
     private Cursor mCursor;
     private long mItemId;
     private View mRootView;
@@ -53,20 +57,32 @@ public class ArticleDetailFragment extends Fragment implements
     private ObservableScrollView mScrollView;
     private DrawInsetsFrameLayout mDrawInsetsFrameLayout;
     private ColorDrawable mStatusBarColorDrawable;
-
     private int mTopInset;
     private View mPhotoContainerView;
     private ImageView mPhotoView;
     private int mScrollY;
     private boolean mIsCard = false;
     private int mStatusBarFullOpacityBottom;
-
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
     private SimpleDateFormat outputFormat = new SimpleDateFormat();
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
+    private int mStartingPosition;
+    private int mArticlePosition;
+    private final Callback mImageCallback = new Callback() {
+        @Override
+        public void onSuccess() {
+            startPostponedEnterTransition();
+        }
 
+        @Override
+        public void onError() {
+            startPostponedEnterTransition();
+        }
+    };
+    private boolean mIsTransitioning;
+    private long mBackgroundImageFadeMillis;
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -74,9 +90,11 @@ public class ArticleDetailFragment extends Fragment implements
     public ArticleDetailFragment() {
     }
 
-    public static ArticleDetailFragment newInstance(long itemId) {
+    public static ArticleDetailFragment newInstance(long itemId, int position, int startingPosition) {
         Bundle arguments = new Bundle();
         arguments.putLong(ARG_ITEM_ID, itemId);
+        arguments.putInt(ARG_ALBUM_IMAGE_POSITION, position);
+        arguments.putInt(ARG_STARTING_ALBUM_IMAGE_POSITION, startingPosition);
         ArticleDetailFragment fragment = new ArticleDetailFragment();
         fragment.setArguments(arguments);
         return fragment;
@@ -96,9 +114,23 @@ public class ArticleDetailFragment extends Fragment implements
         }
     }
 
+    /**
+     * Returns true if {@param view} is contained within {@param container}'s bounds.
+     */
+    private static boolean isViewInBounds(@NonNull View container, @NonNull View view) {
+        Rect containerBounds = new Rect();
+        container.getHitRect(containerBounds);
+        return view.getLocalVisibleRect(containerBounds);
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mStartingPosition = getArguments().getInt(ARG_STARTING_ALBUM_IMAGE_POSITION);
+        mArticlePosition = getArguments().getInt(ARG_ALBUM_IMAGE_POSITION);
+        mIsTransitioning = savedInstanceState == null && mStartingPosition == mArticlePosition;
+        mBackgroundImageFadeMillis = 1000;
 
         if (getArguments().containsKey(ARG_ITEM_ID)) {
             mItemId = getArguments().getLong(ARG_ITEM_ID);
@@ -150,6 +182,13 @@ public class ArticleDetailFragment extends Fragment implements
 //        });
 
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
+        String newTransitionName = getString(R.string.transition_photo) + String.valueOf(mItemId);
+        mPhotoView.setTransitionName(newTransitionName);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mPhotoView.setTransitionName(newTransitionName);
+            mPhotoView.setTag(newTransitionName);
+        }
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
 
         mStatusBarColorDrawable = new ColorDrawable(0);
@@ -233,9 +272,23 @@ public class ArticleDetailFragment extends Fragment implements
 
             }
             bodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n|\n)", "<br />")));
-            Picasso.with(mRootView.getContext()).
-                    load(mCursor.getString(ArticleLoader.Query.PHOTO_URL)).
-                    into(mPhotoView);
+
+            RequestCreator albumImageRequest = Picasso.with(mRootView.getContext()).
+                    load(mCursor.getString(ArticleLoader.Query.PHOTO_URL));
+
+//            if (mIsTransitioning) {
+//                albumImageRequest.noFade();
+//                backgroundImageRequest.noFade();
+//                backgroundImage.setAlpha(0f);
+//                getActivity().getWindow().getSharedElementEnterTransition().addListener(new TransitionListenerAdapter() {
+//                    @Override
+//                    public void onTransitionEnd(Transition transition) {
+//                        backgroundImage.animate().setDuration(mBackgroundImageFadeMillis).alpha(1f);
+//                    }
+//                });
+//            }
+
+            albumImageRequest.into(mPhotoView, mImageCallback);
         } else {
             mRootView.setVisibility(View.GONE);
             titleView.setText("N/A");
@@ -283,5 +336,32 @@ public class ArticleDetailFragment extends Fragment implements
         return mIsCard
                 ? (int) mPhotoContainerView.getTranslationY() + mPhotoView.getHeight() - mScrollY
                 : mPhotoView.getHeight() - mScrollY;
+    }
+
+    private void startPostponedEnterTransition() {
+        if (mArticlePosition == mStartingPosition) {
+            mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override
+                public boolean onPreDraw() {
+                    mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
+                    ActivityCompat.startPostponedEnterTransition(getActivity());
+//                    ActivityCompat.startPostponedEnterTransition(getActivity());
+//                    getActivity().startPostponedEnterTransition();
+                    return true;
+                }
+            });
+        }
+    }
+
+    /**
+     * Returns the shared element that should be transitioned back to the previous Activity,
+     * or null if the view is not visible on the screen.
+     */
+    @Nullable
+    ImageView getArticleImage() {
+        if (isViewInBounds(getActivity().getWindow().getDecorView(), mPhotoView)) {
+            return mPhotoView;
+        }
+        return null;
     }
 }
