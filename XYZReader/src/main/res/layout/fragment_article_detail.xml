@@ -42,6 +42,7 @@
                     android:layout_height="?actionBarSize"
                     android:background="?selectableItemBackgroundBorderless"
                     android:contentDescription="@string/up"
+                    android:padding="@dimen/detail_back_button_padding"
                     android:src="@drawable/ic_arrow_back"
                     android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
