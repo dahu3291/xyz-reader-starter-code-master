@@ -16,14 +16,10 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.support.v7.widget.Toolbar;
-import android.text.Html;
-import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.xyzreader.R;
@@ -32,12 +28,7 @@ import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
 import com.squareup.picasso.Picasso;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -51,17 +42,16 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     static final String EXTRA_STARTING_ARTICLE_POSITION = "extra_starting_item_position";
     static final String EXTRA_CURRENT_ARTICLE_POSITION = "extra_current_item_position";
-    private static final String TAG = ArticleListActivity.class.toString();
+//    private static final String TAG = ArticleListActivity.class.toString();
     private static final String HAS_REFRESH = "HAS_REFRESH";
     Adapter adapter;
-    private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.US);
-    // Use default locale format
-    private SimpleDateFormat outputFormat = new SimpleDateFormat("MMM, d, yyyy",Locale.US);
-    // Most time functions can only handle 1902 - 2037
-    private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
+//    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.US);
+//    // Use default locale format
+//    private SimpleDateFormat outputFormat = new SimpleDateFormat("MMM, d, yyyy",Locale.US);
+//    // Most time functions can only handle 1902 - 2037
+//    private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
     private boolean mIsRefreshing = false;
     private Bundle mTmpReenterState;
 
@@ -76,7 +66,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                     // different page in the DetailsActivity. We must update the shared element
                     // so that the correct one falls into place.
 
-                    String newTransitionName = getString(R.string.transition_photo) + adapter.getCursor().getString(ArticleLoader.Query._ID);
+                    String newTransitionName = getString(R.string.transition_photo) + currentPosition;
                     View newSharedElement = mRecyclerView.findViewWithTag(newTransitionName);
 //                    mRecyclerView.findViewHolderForAdapterPosition(currentPosition).itemView.findViewById(R.id.thumbnail)
                     if (newSharedElement != null) {
@@ -118,10 +108,16 @@ public class ArticleListActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-//        setExitSharedElementCallback(mCallback);
+        setExitSharedElementCallback(mCallback);
 
 
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                refresh();
+            }
+        });
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
@@ -185,35 +181,35 @@ public class ArticleListActivity extends AppCompatActivity implements
         mIsDetailsActivityStarted = false;
     }
 
-//    @Override
-//    public void onActivityReenter(int requestCode, Intent data) {
-//        super.onActivityReenter(requestCode, data);
-////        mTmpReenterState = new Bundle(data.getExtras());
-////        int startingPosition = mTmpReenterState.getInt(EXTRA_STARTING_ARTICLE_POSITION);
-////        int currentPosition = mTmpReenterState.getInt(EXTRA_CURRENT_ARTICLE_POSITION);
-////        if (startingPosition != currentPosition) {
-////            mRecyclerView.scrollToPosition(currentPosition);
-////        }
-////        postponeEnterTransition();
-////        mSwipeRefreshLayout.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-////            @Override
-////            public boolean onPreDraw() {
-////                mSwipeRefreshLayout.getViewTreeObserver().removeOnPreDrawListener(this);
-////                startPostponedEnterTransition();
-////                return true;
-////            }
-////        });
-//
-////        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
-////            @Override
-////            public boolean onPreDraw() {
-////                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
-////                mRecyclerView.requestLayout();
-////                startPostponedEnterTransition();
-////                return true;
-////            }
-////        });
-//    }
+    @Override
+    public void onActivityReenter(int requestCode, Intent data) {
+        super.onActivityReenter(requestCode, data);
+        mTmpReenterState = new Bundle(data.getExtras());
+        int startingPosition = data.getIntExtra(EXTRA_STARTING_ARTICLE_POSITION,0);
+        int currentPosition = data.getIntExtra(EXTRA_CURRENT_ARTICLE_POSITION,0);
+        if (startingPosition != currentPosition) {
+            mRecyclerView.scrollToPosition(currentPosition);
+        }
+        postponeEnterTransition();
+//        mSwipeRefreshLayout.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+//            @Override
+//            public boolean onPreDraw() {
+//                mSwipeRefreshLayout.getViewTreeObserver().removeOnPreDrawListener(this);
+//                startPostponedEnterTransition();
+//                return true;
+//            }
+//        });
+
+        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
+                mRecyclerView.requestLayout();
+                startPostponedEnterTransition();
+                return true;
+            }
+        });
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         DynamicHeightNetworkImageView thumbnailView;
@@ -236,9 +232,9 @@ public class ArticleListActivity extends AppCompatActivity implements
             mCursor = cursor;
         }
 
-        Cursor getCursor() {
-            return mCursor;
-        }
+//        Cursor getCursor() {
+//            return mCursor;
+//        }
 
         @Override
         public long getItemId(int position) {
@@ -253,7 +249,9 @@ public class ArticleListActivity extends AppCompatActivity implements
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    ImageView targetPhotoIV = (ImageView) view.findViewById(R.id.thumbnail);
+
+                    DynamicHeightNetworkImageView targetPhotoIV = (DynamicHeightNetworkImageView)
+                            view.findViewById(R.id.thumbnail);
                     String transitionName = targetPhotoIV.getTransitionName();
                     Intent intent = new Intent(Intent.ACTION_VIEW,
                             ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
@@ -261,33 +259,33 @@ public class ArticleListActivity extends AppCompatActivity implements
                     Log.i("transition_name_orig", transitionName);
                     if (!mIsDetailsActivityStarted) {
                         mIsDetailsActivityStarted = true;
-                        startActivity(intent);
+                        startActivity(intent, ActivityOptions.
+                                makeSceneTransitionAnimation(ArticleListActivity.this,
+                                        targetPhotoIV, transitionName).toBundle());
                     }
                 }
             });
-//            ,
-//            ActivityOptions.makeSceneTransitionAnimation(ArticleListActivity.this).toBundle()
+
             return vh;
         }
 
-        private Date parsePublishedDate() {
-            try {
-                String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
-                return dateFormat.parse(date);
-            } catch (ParseException ex) {
-                Log.e(TAG, ex.getMessage());
-                Log.i(TAG, "passing today's date");
-                return new Date();
-            }
-        }
+//        private Date parsePublishedDate() {
+//            try {
+//                String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
+//                return dateFormat.parse(date);
+//            } catch (ParseException ex) {
+//                Log.e(TAG, ex.getMessage());
+//                Log.i(TAG, "passing today's date");
+//                return new Date();
+//            }
+//        }
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             mCursor.moveToPosition(position);
             holder.titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
-            Date publishedDate = parsePublishedDate();
-            String subtitle = outputFormat.format(publishedDate)
-                    + "\n" + " by "
+//            Date publishedDate = parsePublishedDate();
+            String subtitle =  "by "
                     + mCursor.getString(ArticleLoader.Query.AUTHOR);
             holder.subtitleView.setText(subtitle);
 

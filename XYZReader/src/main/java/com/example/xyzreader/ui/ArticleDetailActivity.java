@@ -14,12 +14,10 @@ import android.support.v13.app.FragmentStatePagerAdapter;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.SharedElementCallback;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
@@ -40,12 +38,8 @@ public class ArticleDetailActivity extends AppCompatActivity
     private Cursor mCursor;
     private long mStartId;
     private long mSelectedItemId;
-    private int mSelectedItemUpButtonFloor = Integer.MAX_VALUE;
-    private int mTopInset;
     private ViewPager mPager;
     private MyPagerAdapter mPagerAdapter;
-    private View mUpButtonContainer;
-    private View mUpButton;
     private ArticleDetailFragment mCurrentDetailsFragment;
     private int mCurrentPosition;
     private int mStartingPosition;
@@ -54,14 +48,15 @@ public class ArticleDetailActivity extends AppCompatActivity
         @Override
         public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
             if (mIsReturning) {
-                ImageView sharedElement = mCurrentDetailsFragment.getArticleImage();
+                DynamicHeightNetworkImageView sharedElement =
+                        mCurrentDetailsFragment.getArticleImage();
                 if (sharedElement == null) {
                     // If shared element is null, then it has been scrolled off screen and
                     // no longer visible. In this case we cancel the shared element transition by
                     // removing the shared element from the shared elements map.
                     names.clear();
                     sharedElements.clear();
-                } else if (mStartingPosition != mCurrentPosition) {
+                } else if (mSelectedItemId != mStartId) {
                     // If the user has swiped to a different ViewPager page, then we need to
                     // remove the old shared element and replace it with the new shared element
                     // that should be transitioned instead.
@@ -86,9 +81,9 @@ public class ArticleDetailActivity extends AppCompatActivity
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
         }
         setContentView(R.layout.activity_article_detail);
-//        ActivityCompat.postponeEnterTransition(this);
+        ActivityCompat.postponeEnterTransition(this);
 //        postponeEnterTransition();
-//        setEnterSharedElementCallback(mCallback);
+        setEnterSharedElementCallback(mCallback);
 
         mStartingPosition = getIntent().getIntExtra(EXTRA_STARTING_ARTICLE_POSITION, 0);
         if (savedInstanceState == null) {
@@ -154,15 +149,15 @@ public class ArticleDetailActivity extends AppCompatActivity
         outState.putInt(STATE_CURRENT_PAGE_POSITION, mCurrentPosition);
     }
 
-//    @Override
-//    public void finishAfterTransition() {
-//        mIsReturning = true;
-//        Intent data = new Intent();
-//        data.putExtra(EXTRA_STARTING_ARTICLE_POSITION, mStartingPosition);
-//        data.putExtra(EXTRA_CURRENT_ARTICLE_POSITION, mCurrentPosition);
-//        setResult(RESULT_OK, data);
-//        super.finishAfterTransition();
-//    }
+    @Override
+    public void finishAfterTransition() {
+        mIsReturning = true;
+        Intent data = new Intent();
+        data.putExtra(EXTRA_STARTING_ARTICLE_POSITION, (int) mStartId);
+        data.putExtra(EXTRA_CURRENT_ARTICLE_POSITION, (int) mSelectedItemId);
+        setResult(RESULT_OK, data);
+        super.finishAfterTransition();
+    }
 
     @Override
     public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
@@ -177,7 +172,6 @@ public class ArticleDetailActivity extends AppCompatActivity
         // Select the start ID
         if (mStartId > 0) {
             mCursor.moveToFirst();
-            // TODO: optimize
             while (!mCursor.isAfterLast()) {
                 if (mCursor.getLong(ArticleLoader.Query._ID) == mStartId) {
                     final int position = mCursor.getPosition();
@@ -186,7 +180,6 @@ public class ArticleDetailActivity extends AppCompatActivity
                 }
                 mCursor.moveToNext();
             }
-            mStartId = 0;
         }
     }
 
@@ -195,18 +188,6 @@ public class ArticleDetailActivity extends AppCompatActivity
         mCursor = null;
         mPagerAdapter.notifyDataSetChanged();
     }
-
-    public void onUpButtonFloorChanged(long itemId, ArticleDetailFragment fragment) {
-        if (itemId == mSelectedItemId) {
-            mSelectedItemUpButtonFloor = fragment.getUpButtonFloor();
-//            updateUpButtonPosition();
-        }
-    }
-
-//    private void updateUpButtonPosition() {
-//        int upButtonNormalBottom = mTopInset + mUpButton.getHeight();
-//        mUpButton.setTranslationY(Math.min(mSelectedItemUpButtonFloor - upButtonNormalBottom, 0));
-//    }
 
     private class MyPagerAdapter extends FragmentStatePagerAdapter {
         MyPagerAdapter(FragmentManager fm) {
@@ -217,10 +198,6 @@ public class ArticleDetailActivity extends AppCompatActivity
         public void setPrimaryItem(ViewGroup container, int position, Object object) {
             super.setPrimaryItem(container, position, object);
             mCurrentDetailsFragment = (ArticleDetailFragment) object;
-            if (mCurrentDetailsFragment != null) {
-                mSelectedItemUpButtonFloor = mCurrentDetailsFragment.getUpButtonFloor();
-//                updateUpButtonPosition();
-            }
         }
 
         @Override

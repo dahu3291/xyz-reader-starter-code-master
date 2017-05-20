@@ -11,4 +11,6 @@
 
     <string name="transition_photo">transition_photo</string>
 
+    <integer name="max_line_number_detail_body">100</integer>
+
 </resources>
