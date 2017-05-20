@@ -11,5 +11,7 @@
     <dimen name="card_view_margin">4dp</dimen>
     <dimen name="list_text_margin">16dp</dimen>
     <dimen name="list_text_title_margin_bottom">4dp</dimen>
+    <dimen name="list_margin_bottom">28dp</dimen>
+    <dimen name="scroll_overlap_on_appbar">100dp</dimen>
 
 </resources>

@@ -39,7 +39,7 @@
 
                 <ImageButton
                     android:id="@+id/action_up"
-                    android:layout_width="56dp"
+                    android:layout_width="?actionBarSize"
                     android:layout_height="?actionBarSize"
                     android:background="?selectableItemBackgroundBorderless"
                     android:contentDescription="@string/up"
@@ -57,8 +57,8 @@
         android:id="@+id/scrollview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        app:behavior_overlapTop="100dp"
+        android:layout_gravity="center_horizontal|fill_vertical"
+        app:behavior_overlapTop="@dimen/scroll_overlap_on_appbar"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <com.example.xyzreader.ui.MaxWidthLinearLayout
