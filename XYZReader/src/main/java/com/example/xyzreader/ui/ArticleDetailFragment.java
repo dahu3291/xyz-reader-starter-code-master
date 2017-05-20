@@ -125,7 +125,7 @@ public class ArticleDetailFragment extends Fragment implements
             @Override
             public void onClick(View view) {
                 getActivityCast().onBackPressed();
-                getActivityCast().onSupportNavigateUp();
+//                getActivityCast().onSupportNavigateUp();
             }
         });
 
